@@ -1,169 +1,162 @@
-import { Plane, Transform  } from 'ogl'
+import { Plane, Transform } from 'ogl';
+import GSAP from 'gsap';
+import Prefix from 'prefix';
 
-import GSAP from 'gsap'
-import Prefix from 'prefix'
+import map from 'lodash/map';
 
-import Media from './Media'
-import map from 'lodash/map'
+import Media from './Media';
 
 export default class {
   constructor({ gl, scene, sizes, transition }) {
-    this.id = 'collections'
-    this.gl = gl
-    this.scene = scene
-    this.sizes = sizes
+    this.id = 'collections';
 
-    this.transition = transition
+    this.gl = gl;
+    this.scene = scene;
+    this.sizes = sizes;
+    this.transition = transition;
 
-    this.transformPrefix = Prefix('transform')
+    this.transformPrefix = Prefix('transform');
 
-    this.group = new Transform()
+    this.group = new Transform();
 
-    this.galleryElement = document.querySelector('.collections__gallery')
-    this.galleryWrapperElement = document.querySelector('.collections__gallery__wrapper')
+    this.galleryElement = document.querySelector('.collections__gallery');
+    this.galleryWrapperElement = document.querySelector( '.collections__gallery__wrapper' );
 
-    this.titlesElement = document.querySelector('.collections__titles')
+    this.titlesElement = document.querySelector('.collections__titles');
 
-    this.collectionsElements = document.querySelectorAll('.collections__article')
-    this.collectionsElementsActive = 'collections__article--active'
+    this.collectionsElements = document.querySelectorAll( '.collections__article' );
+    this.collectionsElementsActive = 'collections__article--active';
 
-    this.mediasElements = document.querySelectorAll('.collections__gallery__media')
+    this.mediasElements = document.querySelectorAll( '.collections__gallery__media' );
 
     this.scroll = {
       current: 0,
       start: 0,
       target: 0,
       lerp: 0.1,
-      velocity: 1
-    }
+      velocity: 1,
+    };
 
-    this.createGeometry()
-    this.createGallery()
+    this.createGeometry();
+    this.createGallery();
 
     this.onResize({
-      sizes: this.sizes
-    })
+      sizes: this.sizes,
+    });
 
-    this.group.setParent(this.scene)
+    this.group.setParent(this.scene);
 
-    this.show()
+    this.show();
   }
 
   createGeometry() {
-    this.geometry = new Plane(this.gl)
+    this.geometry = new Plane(this.gl);
   }
 
   createGallery() {
     this.medias = map(this.mediasElements, (element, index) => {
-
       return new Media({
         element,
         geometry: this.geometry,
         index,
         gl: this.gl,
         scene: this.group,
-        sizes: this.sizes
-      })
-    })
-
+        sizes: this.sizes,
+      });
+    });
   }
 
   /**
-   * Animations
+   * Animations.
    */
   async show() {
     if (this.transition) {
-      const { src } = this.transition.mesh.program.uniforms.tMap.value.image
-      const texture = window.TEXTURES[src]
-      const media = this.medias.find(media => media.texture === texture)
-      const scroll = -media.bounds.left - media.bounds.width / 2 + window.innerWidth / 2
+      const { src } = this.transition.mesh.program.uniforms.tMap.value.image;
+      const texture = window.TEXTURES[src];
+      const media = this.medias.find((media) => media.texture === texture);
+      const scroll = -media.bounds.left - media.bounds.width / 2 + window.innerWidth / 2;
 
-      this.update()
+      this.update();
 
-      this.transition.animate({
-        position: { x: 0, y: media.mesh.position.y, z: 0 },
-        rotation: media.mesh.rotation,
-        scale: media.mesh.scale,
-      }, () => {
-        media.opacity.multiplier = 1
+      this.transition.animate(
+        {
+          position: { x: 0, y: media.mesh.position.y, z: 0 },
+          rotation: media.mesh.rotation,
+          scale: media.mesh.scale,
+        },
+        () => {
+          media.opacity.multiplier = 1;
 
-        map(this.medias, item => {
-          if (media !== item) {
-            item.show()
-          }
-        })
+          map(this.medias, (item) => {
+            if (media !== item) {
+              item.show();
+            }
+          });
 
-        this.scroll.current = this.scroll.target = this.scroll.start = this.scroll.last = scroll
-
-        console.log(this.scroll.current)
-      })
+          this.scroll.current = this.scroll.target = this.scroll.start = this.scroll.last = scroll;
+        }
+      );
     } else {
-      map(this.medias, media => media.show())
+      map(this.medias, (media) => media.show());
     }
   }
 
   hide() {
-    map(this.medias, media => media.hide())
+    map(this.medias, (media) => media.hide());
   }
 
   /**
-   * Events
+   * Events.
    */
   onResize(event) {
-    this.sizes = event.sizes
+    this.sizes = event.sizes;
 
-    this.bounds = this.galleryWrapperElement.getBoundingClientRect()
+    this.bounds = this.galleryWrapperElement.getBoundingClientRect();
 
-    this.scroll.last = this.scroll.target = 0
+    this.scroll.last = this.scroll.target = 0;
 
-    map(this.medias, media => media.onResize(event, this.scroll))
+    map(this.medias, (media) => media.onResize(event, this.scroll));
 
-    this.scroll.limit = this.bounds.width - this.medias[0].element.clientWidth
-
+    this.scroll.limit = this.bounds.width - this.medias[0].element.clientWidth;
   }
 
   onTouchDown({ x, y }) {
-    this.scroll.last = this.scroll.current
+    this.scroll.last = this.scroll.current;
   }
 
   onTouchMove({ x, y }) {
-    const distance = x.start - x.end
+    const distance = x.start - x.end;
 
-    this.scroll.target = this.scroll.last - distance
+    this.scroll.target = this.scroll.last - distance;
   }
 
-  onTouchUp({ x, y }) {
+  onTouchUp({ x, y }) {}
 
-  }
-
-  onWheel ({ pixelY }) {
-    this.scroll.target += pixelY
+  onWheel({ pixelY }) {
+    this.scroll.target += pixelY;
   }
 
   /**
-   * Change
+   * Changed.
    */
   onChange(index) {
     this.index = index;
 
-    const selectedCollection = parseInt(this.mediasElements[this.index].getAttribute('data-index'))
+    const selectedCollection = parseInt( this.mediasElements[this.index].getAttribute('data-index'));
 
     map(this.collectionsElements, (element, elementIndex) => {
       if (elementIndex === selectedCollection) {
-        element.classList.add(this.collectionsElementsActive)
+        element.classList.add(this.collectionsElementsActive);
       } else {
-        element.classList.remove(this.collectionsElementsActive)
+        element.classList.remove(this.collectionsElementsActive);
       }
-    })
+    });
 
-    this.titlesElement.style[this.transformPrefix] = `translateY(-${25 * selectedCollection}%) translate(-50%, -50%) rotate(-90deg)`;
-
-    this.media = this.medias[this.index]
+    this.titlesElement.style[this.transformPrefix] = `translateY(-${ 25 * selectedCollection }%) translate(-50%, -50%) rotate(-90deg)`;
   }
 
-
   /**
-   * Update
+   * Update.
    */
   update() {
     this.scroll.target = GSAP.utils.clamp(
@@ -190,7 +183,7 @@ export default class {
 
     this.scroll.last = this.scroll.current;
 
-    const index = Math.floor( Math.abs( (this.scroll.current - this.medias[0].bounds.width / 2) / this.scroll.limit ) * (this.medias.length - 1) ); // prettier-ignore
+    const index = Math.floor( Math.abs( (this.scroll.current - this.medias[0].bounds.width / 2) / this.scroll.limit ) * (this.medias.length - 1) );
 
     if (this.index !== index) {
       this.onChange(index);
@@ -198,15 +191,17 @@ export default class {
 
     map(this.medias, (media, index) => {
       media.update(this.scroll.current, this.index);
-      media.mesh.rotation.z = Math.abs( GSAP.utils.mapRange(0, 1, -0.2, 0.2, index / (this.medias.length - 1)) ) - 0.1; // prettier-ignore
 
-      media.mesh.position.y += Math.cos((media.mesh.position.x / this.sizes.width) * Math.PI * 0.1) * 40 - 40; }); // prettier-ignore
+      // media.mesh.rotation.z = Math.abs( GSAP.utils.mapRange(0, 1, -0.2, 0.2, index / (this.medias.length - 1)) ) - 0.1;
+      // const extra = window.innerWidth > 768 ? 40 : 10
+      // media.mesh.position.y += Math.cos((media.mesh.position.x / this.sizes.width) * Math.PI * 0.1) * extra - extra;
+    });
   }
 
   /**
-   * Destroy
+   * Destroy.
    */
   destroy() {
-    this.scene.removeChild(this.group)
+    this.scene.removeChild(this.group);
   }
 }
