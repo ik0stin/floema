@@ -15,6 +15,8 @@ export default class {
     this.sizes = sizes;
     this.transition = transition;
 
+    this.updateWaveEffect = true;
+
     this.transformPrefix = Prefix('transform');
 
     this.group = new Transform();
@@ -70,7 +72,10 @@ export default class {
    * Animations.
    */
   async show() {
+
     if (this.transition) {
+      this.updateWaveEffect = false;
+
       const { src } = this.transition.mesh.program.uniforms.tMap.value.image;
       const texture = window.TEXTURES[src];
       const media = this.medias.find((media) => media.texture === texture);
@@ -96,6 +101,8 @@ export default class {
           this.scroll.current = this.scroll.target = this.scroll.start = this.scroll.last = scroll;
         }
       );
+
+      this.updateWaveEffect = true;
     } else {
       map(this.medias, (media) => media.show());
     }
@@ -133,7 +140,7 @@ export default class {
   onTouchUp({ x, y }) {}
 
   onWheel({ pixelY }) {
-    this.scroll.target += pixelY;
+    this.scroll.target -= pixelY;
   }
 
   /**
@@ -192,9 +199,13 @@ export default class {
     map(this.medias, (media, index) => {
       media.update(this.scroll.current, this.index);
 
-      // media.mesh.rotation.z = Math.abs( GSAP.utils.mapRange(0, 1, -0.2, 0.2, index / (this.medias.length - 1)) ) - 0.1;
-      // const extra = window.innerWidth > 768 ? 40 : 10
-      // media.mesh.position.y += Math.cos((media.mesh.position.x / this.sizes.width) * Math.PI * 0.1) * extra - extra;
+      media.mesh.rotation.z = Math.abs( GSAP.utils.mapRange(0, 1, -0.2, 0.2, index / (this.medias.length - 1)) ) - 0.1;
+
+      if (this.updateWaveEffect) {
+        const extra = window.innerWidth > 768 ? 40 : 10;
+        media.mesh.position.y += Math.cos((media.mesh.position.x / this.sizes.width) * Math.PI * 0.1) * extra - extra;
+      }
+
     });
   }
 
